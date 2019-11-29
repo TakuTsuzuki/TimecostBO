@@ -27,8 +27,11 @@ def gauss_hermite(x, GP_model, N_q):
     _weights = np.power(np.pi,-1/2)*weights
     return _points, _weights
 
-def fit(X, Y, kernel,noise_var = .01):
+@jit
+def fit(X, Y, kernel,noise_var = 1e-3):
     model = GPy.models.GPRegression(X,Y,kernel,noise_var=noise_var)
+    model.rbf.lengthscale.fix()
+    #model.rbf.variance.constrain_bounded(1e-12,4)
     model.optimize()
     return model
 
@@ -37,7 +40,7 @@ def minimize(func_acq,bounds,grid=10):
     #result_fx = np.atleast_2d(res[1])
     return np.array([result_x])
 
-def gap(values, fmin=0.01147387):
+def gap(values, fmin):
     s0 = values[0][0]
     smin = min(values)[0]
     G=(s0-smin)/(s0-fmin)

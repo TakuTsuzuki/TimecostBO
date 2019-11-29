@@ -37,15 +37,15 @@ def rollout_utility_archive(x,
                     depth_h, 
                     _queries, 
                     _values, 
-                    kernel,
                     N_q,
                     decay_rate=0.9,
-                    ARD_Flag = True):
+                    ARD_Flag = False,
+                    length_scale = None):
     #print(depth_h)
     if len(x.shape) == 1:
         x = np.array([x])
-    kernel = GPy.kern.RBF(len(bounds), ARD=ARD_Flag) 
-    gp_model = fit(_queries, _values, kernel) #todo:memo化
+    kernel = GPy.kern.RBF(len(bounds), ARD=ARD_Flag, lengthscale=length_scale)
+    gp_model = fit(_queries, _values, kernel) #todo:memo
     if depth_h == 0:
         U = ei(x,bounds ,gp_model)
     else:
@@ -53,10 +53,9 @@ def rollout_utility_archive(x,
         _queries = np.concatenate([_queries,x])
         points, weights = gauss_hermite(x, gp_model, N_q)
         for i in range(N_q):
-            #print(i,"beforfit_beforker")
             val = np.array([[points[0][i]]])
             _values = np.concatenate([_values,val])
-            kernel = GPy.kern.RBF(len(bounds), ARD=ARD_Flag)
+            kernel = GPy.kern.RBF(len(bounds), ARD=ARD_Flag, lengthscale=length_scale)
             #print("X",_queries)
             #print("Y",_values)
             _gp_model = fit(_queries, _values, kernel) #todo:memo
@@ -68,33 +67,52 @@ def rollout_utility_archive(x,
                                     depth_h-1,
                                     _queries,
                                     _values,
-                                    kernel,
                                     N_q,
-                                    decay_rate )
+                                    decay_rate,
+                                    ARD_Flag = ARD_Flag,
+                                    length_scale = length_scale)
             _values = _values[:-1,:]
         _queries = _queries[:-1,:]
     return U
 
 @jit
-def rollout_utility_mcmc(x,
+def rollout_mcmc(x,
                     bounds,
                     func_policy, 
                     depth_h, 
-                    _queries, 
-                    _values, 
-                    kernel,
+                    queries, 
+                    values, 
                     n_sample=10,
-                    decay_rate=0.9):
+                    decay_rate=.9,
+                    ARD_Flag = False,
+                    length_scale = None,
+                    remain_h = None
+                        ):
+    if depth_h>remain_h:
+        depth_h = remain_h #maximum depth depends on num of queries that remains
     if len(x.shape) == 1:
         x = np.array([x])
-    queriesori = np.copy(_queries)
-    valuesori = np.copy(_values)
+        
+    kernel = GPy.kern.RBF(len(bounds), ARD=ARD_Flag, lengthscale=length_scale)
+    gp_model = fit(_queries, _values, kernel)
+    if depth_h == 0:
+        U = ei(x,bounds ,gp_model)
+        
+    queriesori = np.copy(queries)
+    valuesori = np.copy(values)
     for i in range(n_sample):
         _queries = np.copy(queriesori)
         _values = np.copy(valuesori)
+        #predict 1st step
+        kernel = GPy.kern.RBF(len(bounds), ARD=ARD_Flag, lengthscale=length_scale)
+        gp_model = fit(_queries, _values, kernel)
+        mu, sig = _gp_model.predict_f(x)
+        val = np.array([[np.random.normal(mu, sig)]])
         _queries = np.concatenate([_queries,x])
+        _values = np.concatenate([_values,val])
         for j in range(depth_h):
-            _h = depth_h - j - 1
+            _remain_h = depth_h - j - 1
+            kernel = GPy.kern.RBF(len(bounds), ARD=ARD_Flag, lengthscale=length_scale)
             gp_model = fit(_queries, _values, kernel)
             x_next = func_policy(_gp_model, _h, bounds)
             _queries = np.concatenate([_queries,x])
