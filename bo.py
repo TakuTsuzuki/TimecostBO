@@ -11,7 +11,9 @@ def bayesianOptimization(func_objective,
                          depth_h,
                          N,
                          initial_n=1,
+                         initpoint=None,
                          N_q=3,
+                         n_sample = 10,
                          decay_rate=1,
                          ARD_Flag = False,
                          length_scale = None):
@@ -19,20 +21,17 @@ def bayesianOptimization(func_objective,
     depth_h: num of nest
     N: num of iter
     """
-    if depth_h > N:
-        print("depth_h > N")
-        return 0
-    elif initial_n > N:
-        print("initial_n > N")
-        return 0
+    assert depth_h <= N, "Error: depth_h > N"
+    assert initial_n <= N, "Error: initial_n > N"
     
     _N = N - initial_n
     if initial_n > 0:
         queries = generate_init(bounds, initial_n)
     else:
-        queries = np.array([[0.8, 0.8]]) 
+        queries = initpoint
+
     values = func_objective(queries)
-    lengtn_scale = (bounds[0][1]-bounds[0][0])/10.
+    length_scale = (bounds[0][1]-bounds[0][0])/10.
     for i in range(_N):
         print(i)
         kernel = GPy.kern.RBF(len(bounds), ARD=ARD_Flag, lengthscale=length_scale)
@@ -43,6 +42,7 @@ def bayesianOptimization(func_objective,
         _queries_list = {}
         _values_list = {}
         _trajectory = []
+        _U = 0
         #_idlist = []
         if func_acq == ei:
             GP_model = fit(queries, values, kernel)
@@ -55,6 +55,7 @@ def bayesianOptimization(func_objective,
                                       _queries = queries,
                                       _values = values,
                                       N_q = N_q,
+                                      n_sample = 10,
                                       decay_rate=decay_rate,
                                       ARD_Flag = ARD_Flag,
                                       length_scale = length_scale)
@@ -63,3 +64,4 @@ def bayesianOptimization(func_objective,
         queries = np.concatenate([queries,X])
         values = np.concatenate([values,Y])
     return queries, values
+
