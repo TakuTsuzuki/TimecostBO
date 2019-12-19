@@ -21,7 +21,7 @@ def ei(x,bounds,GP_model,jitter=0.):
     next_x = sig * (u * Phi + phi)
     return next_x
 
-def policy(GP_model, depth_h,bounds):
+def policy_rollout(GP_model, depth_h,bounds):
     # caluc policy function
     if depth_h > 1:
         func2minimize = lambda x : -1*ei(x,bounds,GP_model)
@@ -139,7 +139,7 @@ def rollout_mcmc(x,
         U += np.mean(Udelays)
         return U
 
-
+"""
 _h = 0
 _count_depth = 0
 _gp_list = {}
@@ -211,3 +211,4 @@ def rollout_utility(x,
             _trajectory.pop(-1)
         _queries = _queries[:-1,:]
     return U(x)
+"""

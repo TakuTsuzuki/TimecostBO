@@ -2,11 +2,12 @@ import numpy as np
 import GPy
 from numba import jit
 from utils import generate_init, fit
-from acquisitions import ei, minimize, policy
+from acquisitions import ei, minimize
 
 
 def bayesianOptimization(func_objective,
                          func_acq,
+                         func_policy,
                          bounds,
                          depth_h,
                          N,
@@ -37,12 +38,12 @@ def bayesianOptimization(func_objective,
         kernel = GPy.kern.RBF(len(bounds), ARD=ARD_Flag, lengthscale=length_scale)
         #gp_model = fit(queries, values)
         _h = min({depth_h,_N-i})
-        _count_depth = 0
-        _gp_list = {}
-        _queries_list = {}
-        _values_list = {}
-        _trajectory = []
-        _U = 0
+        #_count_depth = 0
+        #_gp_list = {}
+        #_queries_list = {}
+        #_values_list = {}
+        #_trajectory = []
+        #_U = 0
         #_idlist = []
         if func_acq == ei:
             GP_model = fit(queries, values, kernel)
@@ -50,7 +51,7 @@ def bayesianOptimization(func_objective,
         else:
             facq = lambda x : -1*func_acq(x, 
                                       bounds = bounds,
-                                      func_policy=policy, 
+                                      func_policy=func_policy, 
                                       depth_h = _h, 
                                       _queries = queries,
                                       _values = values,
