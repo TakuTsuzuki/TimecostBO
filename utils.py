@@ -2,6 +2,7 @@ import numpy as np
 import GPy
 
 import scipy as sp
+import numpy as np
 from numba import jit
 
 
@@ -36,9 +37,31 @@ def fit(X, Y, kernel,noise_var = 1e-3):
     return model
 
 def minimize(func_acq,bounds,grid=10):
-    result_x = sp.optimize.brute(func_acq, ranges=bounds,Ns=grid,finish=None)
+    _result_x = sp.optimize.brute(func_acq, ranges=bounds,Ns=grid,finish=None)
     #result_fx = np.atleast_2d(res[1])
-    return np.array([result_x])
+    return np.array([_result_x])
+
+@jit
+def minimize_with_threthold2d(func_acq, func_cost,bounds,threthold,grid=10):
+    gridx, gridy = brute_grid(func_acq, bounds)
+    nextXor0 = filter_threthold2d(func_cost, threthold, gridx, gridy)
+    return nextXor0
+
+def brute_grid(func_acq,bounds,grid=10):
+    _x, _y, _gridx, _gridy = sp.optimize.brute(func_acq, ranges=bounds,Ns=grid,full_output=True,finish=None)
+    #result_fx = np.atleast_2d(res[1])
+    return _gridx, _gridy
+
+@jit
+def filter_threthold2d(func_cost,threthold,_gridx,_gridy,grid=10,huristics = 1e+10):
+    cost_grid = func_cost(_gridx)
+    _flagarray = np.where(cost_grid<=threthold, _gridy, huristics)
+    if np.sum(_flagarray) == (grid**2)*huristics:
+        return 0
+    else:
+        _index = np.unravel_index(np.argmin(_flagarray),_flagarray.shape)
+        _result_x = _gridx[:,_index[0],_index[1]]
+        return np.array([_result_x])
 
 def gap(values, fmin):
     s0 = values[0][0]
